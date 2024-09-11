@@ -1,0 +1,151 @@
+
+.navbar .container-fluid .navbar-brand {
+    font-weight: 550;
+    font-size: 25px;
+    color: var(--c-dark);
+}
+
+.navbar {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    list-style: none;
+    position: relative;
+    padding: 12px 20px;
+    box-shadow: var(--box-shadow);
+}
+
+.navbar-nav .nav-link {
+    font-weight: 500;
+    color: var(--c-dark);
+}
+
+.navbar .navbar-nav {
+    font-size: 16px;
+    list-style: none;
+}
+
+.nav-item .nav-link button {
+    border: 0px transparent;
+    color: #fff;
+    font-weight: 450;
+    font-size: 16px;
+    background-color: var(--btn--clr);
+}
+
+.nav-link button:hover {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.navbar img {
+    width: 150px;
+    position: absolute;
+    top: -1rem;
+}
+
+.nav-item a {
+    display: inline-block;
+    text-decoration: none;
+    position: relative;
+    align-items: center;
+    text-align: center;
+    transition: 0.15s ease-in-out;
+}
+
+.navbar-nav li a::after {
+    content: "";
+    width: 0;
+    background-color: var(--btn--clr);
+    position: absolute;
+    height: 1px;
+    bottom: 12px;
+    left: 0.5rem;
+    transition: 0.30s ease-in-out;
+}
+
+.navbar-nav li a:hover:after {
+    width: 70%;
+}
+
+.navbar-nav li a button {
+    position: static;
+}
+
+.navbar-nav li a:has(label)::after {
+    content: none;
+}
+
+.navbar-nav li a:has(button)::after {
+    content: none;
+}
+
+.toggle-switch {
+    position: relative;
+    width: 60px;
+    height: 30px;
+    --light: #d8dbe0;
+    --dark: #28292c;
+    --link: rgb(27, 129, 112);
+    --link-hover: rgb(24, 94, 82);
+}
+
+.switch-label {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: var(--dark);
+    border-radius: 15px;
+    cursor: pointer;
+    border: 2px solid var(--dark);
+}
+
+.checkbox {
+    position: absolute;
+    display: none;
+}
+
+.slider {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 15px;
+    -webkit-transition: 0.3s;
+    transition: 0.3s;
+}
+
+.checkbox:checked~.slider {
+    background-color: var(--light);
+}
+
+.slider::before {
+    content: "";
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    -webkit-box-shadow: inset 6px -2px 0px 0px var(--light);
+    box-shadow: inset 6px -2px 0px 0px var(--light);
+    background-color: var(--dark);
+    -webkit-transition: 0.3s;
+    transition: 0.3s;
+}
+
+.checkbox:checked~.slider::before {
+    -webkit-transform: translateX(30px);
+    -ms-transform: translateX(30px);
+    transform: translateX(30px);
+    background-color: var(--dark);
+    -webkit-box-shadow: none;
+    box-shadow: none;
+}
+
+.navbar i {
+    font-size: 13px;
+}
+
+.dark .navbar label:before {
+    left: 22px;
+}

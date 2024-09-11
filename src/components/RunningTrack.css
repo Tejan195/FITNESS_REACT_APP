@@ -1,0 +1,56 @@
+.details-area{
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    position: relative;
+
+}
+.pause-resume button{
+    font-size: 25px;
+    height: 50px;
+    width: 50px;
+    cursor: pointer;
+    color:#FFF ;
+    border: 5px solid #f70838;
+    background-color: #f70838;
+    border-radius: 50%;
+    position: relative;
+}
+.user-info{
+    display: flex;
+    padding: 10px;
+    position: absolute;
+    left: 0;
+    top:-1.6rem;
+    width: 100%;
+
+}
+.user-details{
+    display: flex;
+    background-color: aqua;
+    flex-direction: column;
+    justify-content: center;
+    align-items:center;
+    text-align: center;
+}
+.runDis h1{
+    position:absolute;
+    right: 0.5rem;
+    padding-top: 2rem;
+    
+}
+.img img{
+    height: 50px;
+    width:50px;
+    border-radius: 50%;
+}
+.user-info h2{
+    font-size: 14px;
+}
+.user-info p{
+    font-size: 10px;
+}
+.user-details h1{
+ font-size: 30px; 
+ font-weight: 600;
+}

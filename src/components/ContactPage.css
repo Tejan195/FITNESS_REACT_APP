@@ -1,0 +1,9 @@
+.ContactPage{
+    display: flex;
+    justify-content: space-between;
+}
+@media(max-width:576px){
+    .ContactPage{
+    flex-direction: column;
+    }
+}
