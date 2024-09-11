@@ -7,7 +7,7 @@ import Services from "./components/Services";
 import ContactPage from "./components/ContactPage";
 import Footer from "./components/Footer";
 import RunningTrack from "./components/RunningTrack";
-
+import 'bootstrap/dist/css/bootstrap.min.css';
 
 const Layout = ({ children }) => (
   <>
