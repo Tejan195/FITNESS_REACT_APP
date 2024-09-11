@@ -1,0 +1,71 @@
+
+#HERO {
+    background-image: linear-gradient(0deg, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.3)), url(https://cdn.b12.io/media/21b4f3c6-3cc1-11e8-9f69-0242ac11000f-jpg-hero_image.jpeg);
+    background-position: center;
+    background-size: cover;
+    justify-content: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    position: relative;
+    overflow: hidden;
+    padding: 0 15px;
+}
+
+#HERO .btn1 {
+    color: #fff;
+    background: var(--btn--clr);
+    border: 0.8px solid transparent;
+    height: 2.3rem;
+    font-weight: 500;
+    transition: var(--transition);
+}
+.col-12{
+    display: flex;
+    flex-direction: column;
+    margin-top:10%;
+    width: 80%;
+}
+.btn1:hover {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+#HERO .btn2 {
+    color: var(--c-dark);
+    border: 1px solid transparent;
+    height: 2.3rem;
+    font-weight: 500;
+    transition: var(--transition);
+}
+
+.btn2:hover {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.btn {
+    border: 1px transparent;
+    margin-left:-10px;
+    display: flex;
+    flex-direction: row;
+    gap:1rem;
+}
+#HERO h1{
+    font-size: clamp(2rem,5vw,4rem);
+}
+#HERO h5 {
+    font-size: clamp(0.5rem,2.5vw,1.5rem);
+}
+
+@media(max-width:425px)
+{
+   #HERO .btn1 ,.btn2{
+        height: 2rem;
+        font-size: 10px;
+        font-weight: 500;
+        width: 6rem;
+    }
+    .btn{
+        display: flex;
+        flex-direction: column;
+        align-items: start;
+    }
+}
