@@ -37,7 +37,7 @@ const RunningTrack = () => {
   };
 
   return (
-    <section className="run-track min-vh-90">
+    <section className="run-track min-vh-100">
       <div className="Running-area">
         <div className="map-area">
           <iframe
