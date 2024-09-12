@@ -1,6 +1,7 @@
 import "./Footer.css";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTwitter, faInstagram, faFacebook, faGithub } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faTwitter, faInstagram, faFacebook, faGithub } from '@fortawesome/free-brands-svg-icons';
+
 const Footer = () => {
   return (
     <footer className="">
@@ -8,11 +9,11 @@ const Footer = () => {
         <div className="container">
           <div className="row">
             <div className="col-lg-3 col-sm-6">
-                <h1>Fitech.Ai</h1>
+              <h1>Fitech.Ai</h1>
               <div className="line"></div>
               <p>Empowering Wellness Through Technology</p>
               <div id="social-icons">
-               <a href="#"><FontAwesomeIcon icon={faTwitter} /></a>
+                <a href="#"><FontAwesomeIcon icon={faTwitter} /></a>
                 <a href="#"><FontAwesomeIcon icon={faInstagram} /></a>
                 <a href="#"><FontAwesomeIcon icon={faFacebook} /></a>
                 <a href="#"><FontAwesomeIcon icon={faGithub} /></a>
