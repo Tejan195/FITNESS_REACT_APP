@@ -12,7 +12,6 @@ const Layout = ({ children }) => (
   <>
     <Navbar />
     {children}
-    <Footer />
   </>
 );
 Layout.propTypes={
@@ -31,6 +30,7 @@ const App = () => {
               <Section />
               <Services />
               <ContactPage />
+               <Footer />
             </Layout>
           }
         />

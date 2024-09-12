@@ -17,6 +17,8 @@
     background-color: #f70838;
     border-radius: 50%;
     position: relative;
+    outline: none;
+    margin-top: 5px;
 }
 .user-info{
     display: flex;
