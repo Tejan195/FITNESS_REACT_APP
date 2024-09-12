@@ -1,9 +1,11 @@
+.run-track{
+    background-color: #f0f0f0;
+}
 .details-area{
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     position: relative;
-
 }
 .pause-resume button{
     font-size: 25px;
@@ -53,4 +55,18 @@
 .user-details h1{
  font-size: 30px; 
  font-weight: 600;
+ 
+}
+.stats-grid{
+    display: grid;
+    grid-template-columns: repeat(2,1fr);
+    margin-top: 2rem;
+    text-align: center;
+    padding: 10px;
+    gap:2rem;
+    background: #f0f0f0;
+}
+.stat-item h3{
+    margin: 0;
+    font-size: 1.3rem;
 }
