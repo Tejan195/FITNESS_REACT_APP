@@ -3,10 +3,83 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlay, faPause } from "@fortawesome/free-solid-svg-icons";
 import "./RunningTrack.css";
 
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 6371e3; // Radius of Earth in meters
+  const toRad = (x) => (x * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
 const RunningTrack = () => {
   const [location, setLocation] = useState(null);
   const googleMapAPI = useMemo(() => import.meta.env.VITE_API_KEY, []);
   const [isPlay, setPlay] = useState(false);
+  const [distance, setDistance] = useState(0);
+  const [startTime, setStartTime] = useState(null);
+  const [pace, setPace] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [steps, setSteps] = useState(0);
+  const [speed, setSpeed] = useState(0);
+  const [stride, setStrideLength] = useState(0);
+
+  useEffect(() => {
+    let watchId;
+    let prevCoords = null;
+    if (isPlay) {
+      watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setLocation(`${latitude},${longitude}`);
+          if (prevCoords) {
+            const newDistance = calculateDistance(
+              prevCoords.latitude,
+              prevCoords.longitude,
+              latitude,
+              longitude
+            );
+            setDistance((prevDistance) => prevDistance + newDistance);
+          }
+          prevCoords = { latitude, longitude };
+        },
+        (error) => console.log("Fetching location error", error),
+        { enableHighAccuracy: true }
+      );
+    }
+    return () => {
+      if (watchId) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+    };
+  }, [isPlay]);
+
+  useEffect(() => {
+    let intervalId;
+    if (isPlay && startTime) {
+      intervalId = setInterval(() => {
+        const elapsedTime = (Date.now() - startTime) / 1000;
+        setDuration(elapsedTime);
+      }, 1000);
+    }
+    return () => clearInterval(intervalId);
+  }, [isPlay, startTime, distance]);
+
+  const calculatePaceAndStride = (currentSpeed) => {
+    if (currentSpeed > 0 && distance > 0) {
+      const pacePerKm = (1000 / currentSpeed) / 60;
+      setPace(pacePerKm.toFixed(2));
+    }
+    const calculatedStrideLength =
+      currentSpeed > 0 ? 1.3 * currentSpeed : 0.45 * currentSpeed;
+    setStrideLength(calculatedStrideLength);
+  };
 
   useEffect(() => {
     const fetchLocation = async () => {
@@ -14,11 +87,13 @@ const RunningTrack = () => {
         try {
           await navigator.geolocation.getCurrentPosition(
             (position) => {
-              const { latitude, longitude } = position.coords;
+              const { latitude, longitude, speed: currentSpeed } = position.coords;
               setLocation(`${latitude},${longitude}`);
+              setSpeed(currentSpeed || 0);
+              calculatePaceAndStride(currentSpeed);
             },
             (error) => {
-              console.error("Error fetching data", error);
+              console.error("Error fetching location", error);
             }
           );
         } catch (error) {
@@ -30,10 +105,14 @@ const RunningTrack = () => {
     };
 
     fetchLocation();
-  }, []);
+  }, [isPlay]);
 
   const playPause = () => {
     setPlay((prev) => !prev);
+    if (!isPlay) {
+      setStartTime(Date.now());
+      setDistance(0);
+    }
   };
 
   return (
@@ -62,7 +141,7 @@ const RunningTrack = () => {
               <p>10 Sept 17:00</p>
             </div>
             <div className="runDis">
-              <h1>21Km</h1>
+              <h1>{distance.toFixed(2)} meters</h1>
             </div>
           </div>
           <div className="pause-resume">
@@ -76,22 +155,22 @@ const RunningTrack = () => {
         </div>
         <div className="stats-grid">
           <div className="stat-item">
-            <h3>02:24</h3>
+            <h3>{duration ? duration.toFixed(2) : '00:00'}</h3>
             <p>Duration</p>
           </div>
           <div className="stat-item">
-            <h3>5'50"</h3>
+            <h3>{pace}'/km</h3>
             <p>Pace</p>
           </div>
           <div className="stat-item">
             <h3>400</h3>
             <p>Calories</p>
           </div>
-           <div className="stat-item">
+          <div className="stat-item">
             <h3>3000</h3>
             <p>Steps</p>
           </div>
-         </div>
+        </div>
       </div>
     </section>
   );
