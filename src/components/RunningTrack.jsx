@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef} from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlay, faPause } from "@fortawesome/free-solid-svg-icons";
 import "./RunningTrack.css";
@@ -29,25 +29,28 @@ const RunningTrack = () => {
   const [steps, setSteps] = useState(0);
   const [speed, setSpeed] = useState(0);
   const [stride, setStrideLength] = useState(0);
-
+  const [pauseDuration, setPauseDuration] = useState(0);
+  const [prevLocation, setPrevLocation] = useState(null);
+  let HoldEnd = useRef(null);
   useEffect(() => {
     let watchId;
-    let prevCoords = null;
     if (isPlay) {
       watchId = navigator.geolocation.watchPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
-          setLocation(`${latitude},${longitude}`);
-          if (prevCoords) {
+          const newLocation = `${latitude},${longitude}`;
+          if (prevLocation && newLocation !== prevLocation) {
+            const [prevLat, prevLon] = prevLocation.split(",").map(Number);
             const newDistance = calculateDistance(
-              prevCoords.latitude,
-              prevCoords.longitude,
+              prevLat,
+              prevLon,
               latitude,
               longitude
             );
             setDistance((prevDistance) => prevDistance + newDistance);
           }
-          prevCoords = { latitude, longitude };
+          setPrevLocation(newLocation);
+          setLocation(newLocation);
         },
         (error) => console.log("Fetching location error", error),
         { enableHighAccuracy: true }
@@ -58,18 +61,27 @@ const RunningTrack = () => {
         navigator.geolocation.clearWatch(watchId);
       }
     };
-  }, [isPlay]);
+  }, [isPlay, prevLocation]);
 
   useEffect(() => {
     let intervalId;
     if (isPlay && startTime) {
       intervalId = setInterval(() => {
-        const elapsedTime = (Date.now() - startTime) / 60000;
+        const elapsedTime = (Date.now() - startTime)- pauseDuration;
         setDuration(elapsedTime);
-      },1000);
+      }, 1000);
     }
     return () => clearInterval(intervalId);
-  }, [isPlay, startTime, distance]);
+  }, [isPlay, startTime, pauseDuration]);
+
+  const formattedDuration = (ms) => {
+      const totalseconds = Math.floor(ms / 1000);
+      const minutes = Math.floor(totalseconds / 60);
+      const extractRemainingSec = totalseconds % 60;
+      const paddedMinutes = String(minutes).padStart(2, '0');
+      const paddedseconds = String(extractRemainingSec).padStart(2, '0');
+      return `${paddedMinutes}:${paddedseconds}`;
+    }
   useEffect(() => {
     const calculatePaceAndStride = (currentSpeed) => {
       if (currentSpeed > 0 && distance > 0) {
@@ -109,12 +121,43 @@ const RunningTrack = () => {
   }, [isPlay]);
 
   const playPause = () => {
-    setPlay((prev) => !prev);
+    setPlay((prev) => {
+      if (!prev) {
+        if(startTime===null){
+        setStartTime(Date.now());
+      } else {
+          const resumeTime = Date.now();
+          setPauseDuration((prevPause) => prevPause + (resumeTime - (startTime + duration)));
+      }
+      } else {
+        setPauseDuration(Date.now() - startTime - duration);
+      }
+      return !prev;
+    });
+  };
+  const holdToEnd = () => {
     if (!isPlay) {
-      setStartTime(Date.now());
-      setDistance(0);
+      HoldEnd.current = setTimeout(() => {
+        endWorkout();
+      }, 2000);
     }
   };
+  const releaseTocancel = () => {
+    if (HoldEnd.current) {
+      clearTimeout(HoldEnd.current);
+    }
+  };
+
+  const endWorkout = () => {
+    setPlay(false);
+    setDistance(0);
+    setStartTime(0);
+    setPace(0);
+    setSpeed(0);
+    setSteps(0);
+    setLocation(null);
+    setDuration(0);
+  }
 
   return (
     <section className="run-track min-vh-100">
@@ -124,7 +167,9 @@ const RunningTrack = () => {
             title="Google maps"
             height="450"
             width="100%"
-            src={`https://www.google.com/maps/embed/v1/place?key=${googleMapAPI}&q=${location}`}
+            src={
+              `https://www.google.com/maps/embed/v1/place?key=${googleMapAPI}&q=${location}`
+           }
             loading="lazy"
             style={{ border: 0 }}
             allowFullScreen
@@ -146,7 +191,12 @@ const RunningTrack = () => {
             </div>
           </div>
           <div className="pause-resume">
-            <button onClick={playPause}>
+            <button onClick={playPause}
+              onMouseDown={holdToEnd}
+              onMouseUp={releaseTocancel}
+              onTouchStart={holdToEnd}
+              onTouchEnd={releaseTocancel}
+             >
               <FontAwesomeIcon
                 icon={isPlay ? faPause : faPlay}
                 className="play-pause-icon"
@@ -156,7 +206,7 @@ const RunningTrack = () => {
         </div>
         <div className="stats-grid">
           <div className="stat-item">
-            <h3>{duration ? duration.toFixed(2) : '00:00'}</h3>
+            <h3>{formattedDuration(duration)}</h3>
             <p>Duration</p>
           </div>
           <div className="stat-item">
