@@ -64,22 +64,24 @@ const RunningTrack = () => {
     let intervalId;
     if (isPlay && startTime) {
       intervalId = setInterval(() => {
-        const elapsedTime = (Date.now() - startTime) / 1000;
+        const elapsedTime = (Date.now() - startTime) / 60000;
         setDuration(elapsedTime);
-      }, 1000);
+      },1000);
     }
     return () => clearInterval(intervalId);
   }, [isPlay, startTime, distance]);
-
-  const calculatePaceAndStride = (currentSpeed) => {
-    if (currentSpeed > 0 && distance > 0) {
-      const pacePerKm = (1000 / currentSpeed) / 60;
-      setPace(pacePerKm.toFixed(2));
-    }
-    const calculatedStrideLength =
-      currentSpeed > 0 ? 1.3 * currentSpeed : 0.45 * currentSpeed;
-    setStrideLength(calculatedStrideLength);
-  };
+  useEffect(() => {
+    const calculatePaceAndStride = (currentSpeed) => {
+      if (currentSpeed > 0 && distance > 0) {
+        const pacePerKm = (1000 / currentSpeed) / 60;
+        setPace(pacePerKm.toFixed(2));
+      }
+      const calculatedStrideLength =
+        currentSpeed > 0 ? 1.3 * currentSpeed : 0.45 * currentSpeed;
+      setStrideLength(calculatedStrideLength);
+    }; 
+    calculatePaceAndStride(speed);
+  }, [speed,distance]);
 
   useEffect(() => {
     const fetchLocation = async () => {
@@ -90,7 +92,6 @@ const RunningTrack = () => {
               const { latitude, longitude, speed: currentSpeed } = position.coords;
               setLocation(`${latitude},${longitude}`);
               setSpeed(currentSpeed || 0);
-              calculatePaceAndStride(currentSpeed);
             },
             (error) => {
               console.error("Error fetching location", error);
