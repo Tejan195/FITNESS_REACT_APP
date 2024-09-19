@@ -1,10 +1,10 @@
-import { useState, useMemo, useEffect, useRef} from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlay, faPause } from "@fortawesome/free-solid-svg-icons";
 import "./RunningTrack.css";
 
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
-  const R = 6371e3; // Radius of Earth in meters
+  const R = 6371e3;
   const toRad = (x) => (x * Math.PI) / 180;
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
@@ -29,9 +29,11 @@ const RunningTrack = () => {
   const [steps, setSteps] = useState(0);
   const [speed, setSpeed] = useState(0);
   const [stride, setStrideLength] = useState(0);
-  const [pauseDuration, setPauseDuration] = useState(0);
+  const [pauseTime, setPauseTime] = useState(null);
+  const [totalPauseDuration, setTotalPauseDuration] = useState(0);
   const [prevLocation, setPrevLocation] = useState(null);
   let HoldEnd = useRef(null);
+
   useEffect(() => {
     let watchId;
     if (isPlay) {
@@ -67,21 +69,23 @@ const RunningTrack = () => {
     let intervalId;
     if (isPlay && startTime) {
       intervalId = setInterval(() => {
-        const elapsedTime = (Date.now() - startTime)- pauseDuration;
+        const now = Date.now();
+        const elapsedTime = now - startTime - totalPauseDuration;
         setDuration(elapsedTime);
       }, 1000);
     }
     return () => clearInterval(intervalId);
-  }, [isPlay, startTime, pauseDuration]);
+  }, [isPlay, startTime, totalPauseDuration]);
 
   const formattedDuration = (ms) => {
-      const totalseconds = Math.floor(ms / 1000);
-      const minutes = Math.floor(totalseconds / 60);
-      const extractRemainingSec = totalseconds % 60;
-      const paddedMinutes = String(minutes).padStart(2, '0');
-      const paddedseconds = String(extractRemainingSec).padStart(2, '0');
-      return `${paddedMinutes}:${paddedseconds}`;
-    }
+    const totalseconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(totalseconds / 60);
+    const extractRemainingSec = totalseconds % 60;
+    const paddedMinutes = String(minutes).padStart(2, '0');
+    const paddedseconds = String(extractRemainingSec).padStart(2, '0');
+    return `${paddedMinutes}:${paddedseconds}`;
+  }
+
   useEffect(() => {
     const calculatePaceAndStride = (currentSpeed) => {
       if (currentSpeed > 0 && distance > 0) {
@@ -91,9 +95,9 @@ const RunningTrack = () => {
       const calculatedStrideLength =
         currentSpeed > 0 ? 1.3 * currentSpeed : 0.45 * currentSpeed;
       setStrideLength(calculatedStrideLength);
-    }; 
+    };
     calculatePaceAndStride(speed);
-  }, [speed,distance]);
+  }, [speed, distance]);
 
   useEffect(() => {
     const fetchLocation = async () => {
@@ -123,14 +127,15 @@ const RunningTrack = () => {
   const playPause = () => {
     setPlay((prev) => {
       if (!prev) {
-        if(startTime===null){
-        setStartTime(Date.now());
+        if (startTime === null) {
+          setStartTime(Date.now());
+        } else if (pauseTime) {
+          const additionalPauseDuration = Date.now() - pauseTime;
+          setTotalPauseDuration(prevTotal => prevTotal + additionalPauseDuration);
+          setPauseTime(null);
+        }
       } else {
-          const resumeTime = Date.now();
-          setPauseDuration((prevPause) => prevPause + (resumeTime - (startTime + duration)));
-      }
-      } else {
-        setPauseDuration(Date.now() - startTime - duration);
+        setPauseTime(Date.now());
       }
       return !prev;
     });
@@ -142,6 +147,7 @@ const RunningTrack = () => {
       }, 2000);
     }
   };
+
   const releaseTocancel = () => {
     if (HoldEnd.current) {
       clearTimeout(HoldEnd.current);
@@ -151,12 +157,14 @@ const RunningTrack = () => {
   const endWorkout = () => {
     setPlay(false);
     setDistance(0);
-    setStartTime(0);
+    setStartTime(null);
     setPace(0);
     setSpeed(0);
     setSteps(0);
     setLocation(null);
     setDuration(0);
+    setPauseTime(null);
+    setTotalPauseDuration(0);
   }
 
   return (
@@ -169,7 +177,7 @@ const RunningTrack = () => {
             width="100%"
             src={
               `https://www.google.com/maps/embed/v1/place?key=${googleMapAPI}&q=${location}`
-           }
+            }
             loading="lazy"
             style={{ border: 0 }}
             allowFullScreen
@@ -196,7 +204,7 @@ const RunningTrack = () => {
               onMouseUp={releaseTocancel}
               onTouchStart={holdToEnd}
               onTouchEnd={releaseTocancel}
-             >
+            >
               <FontAwesomeIcon
                 icon={isPlay ? faPause : faPlay}
                 className="play-pause-icon"
