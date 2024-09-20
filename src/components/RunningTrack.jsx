@@ -33,7 +33,7 @@ const RunningTrack = () => {
   const [totalPauseDuration, setTotalPauseDuration] = useState(0);
   const [prevLocation, setPrevLocation] = useState(null);
   let HoldEnd = useRef(null);
-
+  const Min_dist = 5;
   useEffect(() => {
     let watchId;
     if (isPlay) {
@@ -41,7 +41,7 @@ const RunningTrack = () => {
         (position) => {
           const { latitude, longitude } = position.coords;
           const newLocation = `${latitude},${longitude}`;
-          if (prevLocation && newLocation !== prevLocation) {
+          if (prevLocation) {
             const [prevLat, prevLon] = prevLocation.split(",").map(Number);
             const newDistance = calculateDistance(
               prevLat,
@@ -49,13 +49,18 @@ const RunningTrack = () => {
               latitude,
               longitude
             );
-            setDistance((prevDistance) => prevDistance + newDistance);
+            if (newDistance >= Min_dist) {
+              setDistance((prevDistance) => prevDistance + newDistance);
+              setPrevLocation(newDistance);
+              setLocation(newDistance);
+            }
+          } else {
+            setPrevLocation(newLocation);
+            setLocation(newLocation);
           }
-          setPrevLocation(newLocation);
-          setLocation(newLocation);
         },
         (error) => console.log("Fetching location error", error),
-        { enableHighAccuracy: true }
+        { enableHighAccuracy: true, maximumAge:10000, timeout:5000}
       );
     }
     return () => {
@@ -130,12 +135,12 @@ const RunningTrack = () => {
         if (startTime === null) {
           setStartTime(Date.now());
         } else if (pauseTime) {
-          const additionalPauseDuration = Date.now() - pauseTime;
-          setTotalPauseDuration(prevTotal => prevTotal + additionalPauseDuration);
+          const additionalPauseTime = Date.now() - pauseTime;
+          setTotalPauseDuration((prevTotal) => prevTotal + additionalPauseTime);
           setPauseTime(null);
+        } else {
+          setPauseTime(Date.now());
         }
-      } else {
-        setPauseTime(Date.now());
       }
       return !prev;
     });
