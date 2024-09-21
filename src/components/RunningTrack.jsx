@@ -139,7 +139,7 @@ const RunningTrack = () => {
         }
       }
       return !prev;
-    });
+    },[]);
   };
   const holdToEnd = () => {
     if (!isPlay) {
