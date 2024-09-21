@@ -134,12 +134,13 @@ const RunningTrack = () => {
           const additionalPauseTime = Date.now() - pauseTime;
           setTotalPauseDuration((prevTotal) => prevTotal + additionalPauseTime);
           setPauseTime(null);
-        } else {
-          setPauseTime(Date.now());
         }
       }
+      else {
+          setPauseTime(Date.now());
+      }
       return !prev;
-    },[]);
+    });
   };
   const holdToEnd = () => {
     if (!isPlay) {
