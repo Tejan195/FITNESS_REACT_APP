@@ -33,6 +33,7 @@ const RunningTrack = () => {
   const [totalPauseDuration, setTotalPauseDuration] = useState(0);
   const [prevLocation, setPrevLocation] = useState(null);
   let HoldEnd = useRef(null);
+  const MIN_DIST = 5;
   useEffect(() => {
     let watchId;
     if (isPlay) {
@@ -48,11 +49,14 @@ const RunningTrack = () => {
               latitude,
               longitude
             );
-           
+           if(distance > MIN_DIST){
               setDistance((prevDistance) => prevDistance + newDistance);
               setPrevLocation(newDistance);
               setLocation(newDistance);
-          
+           }
+            else{
+              setPrevLocation(newDistance);
+              setLocation(newDistance);
           }
         },
         (error) => console.log("Fetching location error", error),
