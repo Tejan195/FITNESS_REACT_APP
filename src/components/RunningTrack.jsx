@@ -40,7 +40,7 @@ const RunningTrack = () => {
         (position) => {
           const { latitude, longitude } = position.coords;
           const newLocation = `${latitude},${longitude}`;
-          if (prevLocation) {
+          if (prevLocation && prevLocation !== newDistance) {
             const [prevLat, prevLon] = prevLocation.split(",").map(Number);
             const newDistance = calculateDistance(
               prevLat,
