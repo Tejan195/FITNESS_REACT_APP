@@ -33,7 +33,7 @@ const RunningTrack = () => {
   const [totalPauseDuration, setTotalPauseDuration] = useState(0);
   const [prevLocation, setPrevLocation] = useState(null);
   let HoldEnd = useRef(null);
-  const Min_dist = 5;
+  const MIN_DIST = 5;
   useEffect(() => {
     let watchId;
     if (isPlay) {
@@ -41,7 +41,7 @@ const RunningTrack = () => {
         (position) => {
           const { latitude, longitude } = position.coords;
           const newLocation = `${latitude},${longitude}`;
-          if (prevLocation) {
+          if (prevLocation && prevLocation !== newDistance) {
             const [prevLat, prevLon] = prevLocation.split(",").map(Number);
             const newDistance = calculateDistance(
               prevLat,
@@ -49,14 +49,14 @@ const RunningTrack = () => {
               latitude,
               longitude
             );
-            if (newDistance >= Min_dist) {
+           if(distance > MIN_DIST){
               setDistance((prevDistance) => prevDistance + newDistance);
               setPrevLocation(newDistance);
               setLocation(newDistance);
-            }
-          } else {
-            setPrevLocation(newLocation);
-            setLocation(newLocation);
+           }
+            else{
+              setPrevLocation(newDistance);
+              setLocation(newDistance);
           }
         },
         (error) => console.log("Fetching location error", error),
@@ -138,11 +138,11 @@ const RunningTrack = () => {
           const additionalPauseTime = Date.now() - pauseTime;
           setTotalPauseDuration((prevTotal) => prevTotal + additionalPauseTime);
           setPauseTime(null);
-        }
-      } else {
+        } else {
           setPauseTime(Date.now());
         }
-        return !prev;
+      }
+      return !prev;
     });
   };
   const holdToEnd = () => {
