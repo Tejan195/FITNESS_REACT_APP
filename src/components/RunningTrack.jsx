@@ -138,11 +138,11 @@ const RunningTrack = () => {
           const additionalPauseTime = Date.now() - pauseTime;
           setTotalPauseDuration((prevTotal) => prevTotal + additionalPauseTime);
           setPauseTime(null);
-        } else {
+        }
+      } else {
           setPauseTime(Date.now());
         }
-      }
-      return !prev;
+        return !prev;
     });
   };
   const holdToEnd = () => {
