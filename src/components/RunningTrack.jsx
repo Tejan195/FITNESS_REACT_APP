@@ -49,18 +49,19 @@ const RunningTrack = () => {
               latitude,
               longitude
             );
-           if(distance > MIN_DIST){
+            if (newDistance > MIN_DIST) {
               setDistance((prevDistance) => prevDistance + newDistance);
-              setPrevLocation(newDistance);
-              setLocation(newDistance);
-           }
-            else{
-              setPrevLocation(newDistance);
-              setLocation(newDistance);
+              setPrevLocation(newLocation);
+              setLocation(newLocation);
+            }
           }
-        },
-        (error) => console.log("Fetching location error", error),
-        { enableHighAccuracy: true, maximumAge:10000, timeout:5000}
+            else {
+              setPrevLocation(newLocation);
+              setLocation(newLocation);
+            }
+          },
+          (error) => console.log("Fetching location error", error),
+            { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000, }
       );
     }
     return () => {
@@ -69,6 +70,7 @@ const RunningTrack = () => {
       }
     };
   }, [isPlay, prevLocation]);
+
 
   useEffect(() => {
     let intervalId;
@@ -138,11 +140,11 @@ const RunningTrack = () => {
           const additionalPauseTime = Date.now() - pauseTime;
           setTotalPauseDuration((prevTotal) => prevTotal + additionalPauseTime);
           setPauseTime(null);
-        } else {
+        }
+      } else {
           setPauseTime(Date.now());
         }
-      }
-      return !prev;
+        return !prev;
     });
   };
   const holdToEnd = () => {
