@@ -45,7 +45,7 @@ const RunningTrack = () => {
         (position) => {
           const { latitude, longitude } = position.coords;
           const newLocation = { lat: latitude, lng: longitude };
-          if (prevLocation && prevLocation !== newLocation) {
+          if (prevLocation && (prevLocation !== newLocation.lat || prevLocation !== newLocation.lng)) {
             const newDistance = calculateDistance(
               prevLocation.lat,
               prevLocation.lng,
@@ -61,11 +61,14 @@ const RunningTrack = () => {
           } else {
             setPrevLocation(newLocation);
             setLocation(newLocation);
-            setPath([newLocation]);
+            setPath((prevPath) => prevPath.length ? [...prevPath, newLocation] : [newLocation]);
           }
         },
-        (error) => console.log("Fetching location error", error),
-        { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+        (error) => {
+          alert(`Error Fetching location:${error.message}`);
+          console.log("Fetching location error", error),
+            { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+        }
       );
     }
     return () => {
