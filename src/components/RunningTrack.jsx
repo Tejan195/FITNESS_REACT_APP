@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlay, faPause } from "@fortawesome/free-solid-svg-icons";
+import { GoogleMap, LoadScript, Polyline, Marker } from "@react-google-maps/api";
 import "./RunningTrack.css";
 
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -25,27 +26,29 @@ const RunningTrack = () => {
   const [distance, setDistance] = useState(0);
   const [startTime, setStartTime] = useState(null);
   const [pace, setPace] = useState(0);
-  const [duration, setDuration] = useState(0);
+  const [activeDuration, setActiveDuration] = useState(0);
   const [steps, setSteps] = useState(0);
   const [speed, setSpeed] = useState(0);
   const [stride, setStrideLength] = useState(0);
   const [pauseTime, setPauseTime] = useState(null);
-  const [totalPauseDuration, setTotalPauseDuration] = useState(0);
   const [prevLocation, setPrevLocation] = useState(null);
+  const [path, setPath] = useState([]);
+  const [startingLocation, setStartingLocation] = useState(null);
+  const [endingLocation, setEndingLocation] = useState(null);
   let HoldEnd = useRef(null);
   const MIN_DIST = 5;
+
   useEffect(() => {
     let watchId;
     if (isPlay) {
       watchId = navigator.geolocation.watchPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
-          const newLocation = `${latitude},${longitude}`;
-          if (prevLocation && prevLocation !== newDistance) {
-            const [prevLat, prevLon] = prevLocation.split(",").map(Number);
+          const newLocation = { lat: latitude, lng: longitude };
+          if (prevLocation && prevLocation !== newLocation) {
             const newDistance = calculateDistance(
-              prevLat,
-              prevLon,
+              prevLocation.lat,
+              prevLocation.lng,
               latitude,
               longitude
             );
@@ -53,15 +56,16 @@ const RunningTrack = () => {
               setDistance((prevDistance) => prevDistance + newDistance);
               setPrevLocation(newLocation);
               setLocation(newLocation);
+              setPath((prevPath) => [...prevPath, newLocation]);
             }
+          } else {
+            setPrevLocation(newLocation);
+            setLocation(newLocation);
+            setPath([newLocation]);
           }
-            else {
-              setPrevLocation(newLocation);
-              setLocation(newLocation);
-            }
-          },
-          (error) => console.log("Fetching location error", error),
-            { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000, }
+        },
+        (error) => console.log("Fetching location error", error),
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
       );
     }
     return () => {
@@ -71,26 +75,21 @@ const RunningTrack = () => {
     };
   }, [isPlay, prevLocation]);
 
-
   useEffect(() => {
     let intervalId;
-    if (isPlay && startTime) {
+    if (isPlay) {
       intervalId = setInterval(() => {
-        const now = Date.now();
-        const elapsedTime = now - startTime - totalPauseDuration;
-        setDuration(elapsedTime);
+        setActiveDuration(prev => prev + 1000);
       }, 1000);
     }
     return () => clearInterval(intervalId);
-  }, [isPlay, startTime, totalPauseDuration]);
+  }, [isPlay]);
 
   const formattedDuration = (ms) => {
-    const totalseconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(totalseconds / 60);
-    const extractRemainingSec = totalseconds % 60;
-    const paddedMinutes = String(minutes).padStart(2, '0');
-    const paddedseconds = String(extractRemainingSec).padStart(2, '0');
-    return `${paddedMinutes}:${paddedseconds}`;
+    const totalSeconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   }
 
   useEffect(() => {
@@ -113,7 +112,10 @@ const RunningTrack = () => {
           await navigator.geolocation.getCurrentPosition(
             (position) => {
               const { latitude, longitude, speed: currentSpeed } = position.coords;
-              setLocation(`${latitude},${longitude}`);
+              const initialLocation = { lat: latitude, lng: longitude };
+              setLocation(initialLocation);
+              setPrevLocation(initialLocation);
+              setPath([initialLocation]);
               setSpeed(currentSpeed || 0);
             },
             (error) => {
@@ -136,17 +138,17 @@ const RunningTrack = () => {
       if (!prev) {
         if (startTime === null) {
           setStartTime(Date.now());
-        } else if (pauseTime) {
-          const additionalPauseTime = Date.now() - pauseTime;
-          setTotalPauseDuration((prevTotal) => prevTotal + additionalPauseTime);
-          setPauseTime(null);
+          setStartingLocation(location);
         }
+        setPauseTime(null);
       } else {
-          setPauseTime(Date.now());
-        }
-        return !prev;
+        setPauseTime(Date.now());
+        setEndingLocation(location);
+      }
+      return !prev;
     });
   };
+
   const holdToEnd = () => {
     if (!isPlay) {
       HoldEnd.current = setTimeout(() => {
@@ -169,26 +171,50 @@ const RunningTrack = () => {
     setSpeed(0);
     setSteps(0);
     setLocation(null);
-    setDuration(0);
+    setActiveDuration(0);
     setPauseTime(null);
-    setTotalPauseDuration(0);
   }
 
   return (
     <section className="run-track min-vh-100">
       <div className="Running-area">
         <div className="map-area">
-          <iframe
-            title="Google maps"
-            height="450"
-            width="100%"
-            src={
-              `https://www.google.com/maps/embed/v1/place?key=${googleMapAPI}&q=${location}`
-            }
-            loading="lazy"
-            style={{ border: 0 }}
-            allowFullScreen
-          ></iframe>
+          <LoadScript googleMapsApiKey={googleMapAPI}>
+            <GoogleMap
+              center={location}
+              zoom={location ? 15 : 2}
+              mapContainerStyle={{ height: "450px", width: "100%" }}
+            >
+              {path.length > 1 && (
+                <Polyline
+                  path={path}
+                  options={{
+                    strokeColor: "#FF0000",
+                    strokeOpacity: 1.0,
+                    strokeWeight: 4,
+                  }}
+                />
+              )}
+              {startingLocation && (
+                <Marker
+                  position={startingLocation}
+                  icon={{
+                    url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
+                    scaledSize: new window.google.maps.Size(30, 30),
+                  }}
+                />
+              )}
+              {endingLocation && (
+                <Marker
+                  position={endingLocation}
+                  icon={{
+                    url: "http://maps.google.com/mapfiles/ms/icons/red-dot.png",
+                    scaledSize: new window.google.maps.Size(30, 30),
+                  }}
+                />
+              )}
+            </GoogleMap>
+          </LoadScript>
         </div>
         <div className="details-area">
           <div className="user-info">
@@ -206,7 +232,8 @@ const RunningTrack = () => {
             </div>
           </div>
           <div className="pause-resume">
-            <button onClick={playPause}
+            <button
+              onClick={playPause}
               onMouseDown={holdToEnd}
               onMouseUp={releaseTocancel}
               onTouchStart={holdToEnd}
@@ -221,7 +248,7 @@ const RunningTrack = () => {
         </div>
         <div className="stats-grid">
           <div className="stat-item">
-            <h3>{formattedDuration(duration)}</h3>
+            <h3>{formattedDuration(activeDuration)}</h3>
             <p>Duration</p>
           </div>
           <div className="stat-item">
