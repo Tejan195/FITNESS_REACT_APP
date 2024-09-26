@@ -137,14 +137,12 @@ const RunningTrack = () => {
   useEffect(() => {
     if (!isPlay) return;
     const threshold = 9.81;
-    let stepCount = steps;
     const handleStepsMotion = (event) => {
-      const { x, y, z } = event.accleration;
+      const { x, y, z } = event.acceleration;
       if (x !== null && y !== null && z !== null) {
         const accelerationMagnitude = Math.sqrt(x * x + y * y + z * z);
         if (accelerationMagnitude > threshold) {
-          stepCount++;
-          setSteps(stepCount);
+          setSteps((prevStep)=>prevStep+1);
         }
       }
     };
