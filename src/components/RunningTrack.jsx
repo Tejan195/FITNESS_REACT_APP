@@ -36,7 +36,6 @@ const RunningTrack = () => {
   const [startingLocation, setStartingLocation] = useState(null);
   const [endingLocation, setEndingLocation] = useState(null);
   let HoldEnd = useRef(null);
-
   useEffect(() => {
     let watchId;
     if (isPlay) {
@@ -67,9 +66,9 @@ const RunningTrack = () => {
           alert(`Error Fetching location:${error.message}`);
           console.log("Fetching location error", error);
         },
-        { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 }
       );
-    }
+    } 
     return () => {
       if (watchId) {
         navigator.geolocation.clearWatch(watchId);
@@ -135,7 +134,29 @@ const RunningTrack = () => {
 
     fetchLocation();
   }, [isPlay]);
-
+  useEffect(() => {
+    if (!isPlay) return;
+    const threshold = 9.81;
+    let stepCount = steps;
+    const handleStepsMotion = (event) => {
+      const { x, y, z } = event.accleration;
+      if (x !== null && y !== null && z !== null) {
+        const accelerationMagnitude = Math.sqrt(x * x + y * y + z * z);
+        if (accelerationMagnitude > threshold) {
+          stepCount++;
+          setSteps(stepCount);
+        }
+      }
+    };
+    if (window.DeviceMotionEvent) {
+      window.addEventListener('devicemotion', handleStepsMotion);
+    } else {
+      console.warn("Devicemotion is not supported by the device");
+    }
+    return () => {
+      window.removeEventListener('devicemotion', handleStepsMotion);
+    };
+  },[isPlay,steps]);
   const playPause = () => {
     setPlay((prev) => {
       if (!prev) {
@@ -231,7 +252,7 @@ const RunningTrack = () => {
               <p>10 Sept 17:00</p>
             </div>
             <div className="runDis">
-              <h1>{distance.toFixed(2)} meters</h1>
+              <h1>{(distance/1000).toFixed(1)}km</h1>
             </div>
           </div>
           <div className="pause-resume">
@@ -263,7 +284,7 @@ const RunningTrack = () => {
             <p>Calories</p>
           </div>
           <div className="stat-item">
-            <h3>3000</h3>
+            <h3>{steps}</h3>
             <p>Steps</p>
           </div>
         </div>
