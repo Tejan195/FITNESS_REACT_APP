@@ -36,7 +36,6 @@ const RunningTrack = () => {
   const [startingLocation, setStartingLocation] = useState(null);
   const [endingLocation, setEndingLocation] = useState(null);
   let HoldEnd = useRef(null);
-  const MIN_DIST = 5;
 
   useEffect(() => {
     let watchId;
@@ -45,14 +44,14 @@ const RunningTrack = () => {
         (position) => {
           const { latitude, longitude } = position.coords;
           const newLocation = { lat: latitude, lng: longitude };
-          if (prevLocation && (prevLocation !== newLocation.lat || prevLocation !== newLocation.lng)) {
+          if (prevLocation) {
             const newDistance = calculateDistance(
-              prevLocation.lat,
-              prevLocation.lng,
+              prevLocation.lat || latitude,
+              prevLocation.lng || longitude,
               latitude,
               longitude
             );
-            if (newDistance > MIN_DIST) {
+            if (newDistance>0) {
               setDistance((prevDistance) => prevDistance + newDistance);
               setPrevLocation(newLocation);
               setLocation(newLocation);
@@ -61,14 +60,14 @@ const RunningTrack = () => {
           } else {
             setPrevLocation(newLocation);
             setLocation(newLocation);
-            setPath((prevPath) => prevPath.length ? [...prevPath, newLocation] : [newLocation]);
+            setPath([newLocation]);
           }
         },
         (error) => {
           alert(`Error Fetching location:${error.message}`);
-          console.log("Fetching location error", error),
-            { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
-        }
+          console.log("Fetching location error", error);
+        },
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
       );
     }
     return () => {
@@ -101,8 +100,9 @@ const RunningTrack = () => {
         const pacePerKm = (1000 / currentSpeed) / 60;
         setPace(pacePerKm.toFixed(2));
       }
-      const calculatedStrideLength =
-        currentSpeed > 0 ? 1.3 * currentSpeed : 0.45 * currentSpeed;
+      const calculatedStrideLength = currentSpeed > 0
+      ? Math.max(0.45 * currentSpeed, 0.5) 
+      : 0;
       setStrideLength(calculatedStrideLength);
     };
     calculatePaceAndStride(speed);
