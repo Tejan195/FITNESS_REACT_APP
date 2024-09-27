@@ -31,6 +31,8 @@ const RunningTrack = () => {
   const [speed, setSpeed] = useState(0);
   const [stride, setStrideLength] = useState(0);
   const [pauseTime, setPauseTime] = useState(null);
+  const [calorie, setCalorie] = useState(0);
+   const [direction, setDirection] = useState(0);
   const [prevLocation, setPrevLocation] = useState(null);
   const [path, setPath] = useState([]);
   const [startingLocation, setStartingLocation] = useState(null);
@@ -154,7 +156,41 @@ const RunningTrack = () => {
     return () => {
       window.removeEventListener('devicemotion', handleStepsMotion);
     };
-  },[isPlay,steps]);
+  }, [isPlay, steps]);
+  useEffect(() => {
+    if (!isPlay) return;
+    const handleOrientation = (event) => {
+      const { alpha } = event;
+      if (alpha !== null) {
+        setDirection(alpha.toFixed(2));
+      } else if (event.webkitCompassHeading) {
+        setDirection(event.webkitCompassHeading.toFixed(2));
+      }
+    };
+    const setUpEventListener = () => {
+      if (window.DeviceOrientationEvent) {
+        window.addEventListener('deviceorientation', handleOrientation);
+      } else {
+        console.warn("DeviceOrientation is not supported on this device");
+      }
+    };
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      DeviceOrientationEvent.requestPermission()
+        .then(Permission => {
+          if (Permission === 'granted') {
+            setUpEventListener();
+          } else {
+            console.warn("Permission denied");
+          }
+        })
+        .catch(console.error);
+    } else {
+      setUpEventListener();
+  }
+    return () => {
+      window.removeEventListener('deviceorientation', handleOrientation);
+    }
+  }, [isPlay]);
   const playPause = () => {
     setPlay((prev) => {
       if (!prev) {
