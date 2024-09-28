@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlay, faPause } from "@fortawesome/free-solid-svg-icons";
-import { GoogleMap, LoadScript, Polyline, Marker } from "@react-google-maps/api";
+import { GoogleMap, useLoadScript, Polyline, LoadScript } from "@react-google-maps/api";
 import "./RunningTrack.css";
 
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -18,7 +18,7 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 };
-
+const LIBRARIES = ["marker"];
 const RunningTrack = () => {
   const [location, setLocation] = useState(null);
   const googleMapAPI = useMemo(() => import.meta.env.VITE_API_KEY, []);
@@ -32,12 +32,16 @@ const RunningTrack = () => {
   const [stride, setStrideLength] = useState(0);
   const [pauseTime, setPauseTime] = useState(null);
   const [calorie, setCalorie] = useState(0);
-   const [direction, setDirection] = useState(0);
+  const [direction, setDirection] = useState(0);
   const [prevLocation, setPrevLocation] = useState(null);
   const [path, setPath] = useState([]);
   const [startingLocation, setStartingLocation] = useState(null);
   const [endingLocation, setEndingLocation] = useState(null);
+  const MapId = 'e481db0b4a053450';
   let HoldEnd = useRef(null);
+  const mapRef = useRef(null);
+  const starMarkertRef = useRef(null);
+  const endMarkerRef = useRef(null);
   useEffect(() => {
     let watchId;
     if (isPlay) {
@@ -52,7 +56,7 @@ const RunningTrack = () => {
               latitude,
               longitude
             );
-            if (newDistance>0) {
+            if (newDistance > 0) {
               setDistance((prevDistance) => prevDistance + newDistance);
               setPrevLocation(newLocation);
               setLocation(newLocation);
@@ -70,7 +74,7 @@ const RunningTrack = () => {
         },
         { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 }
       );
-    } 
+    }
     return () => {
       if (watchId) {
         navigator.geolocation.clearWatch(watchId);
@@ -102,8 +106,8 @@ const RunningTrack = () => {
         setPace(pacePerKm.toFixed(2));
       }
       const calculatedStrideLength = currentSpeed > 0
-      ? Math.max(0.45 * currentSpeed, 0.5) 
-      : 0;
+        ? Math.max(0.45 * currentSpeed, 0.5)
+        : 0;
       setStrideLength(calculatedStrideLength);
     };
     calculatePaceAndStride(speed);
@@ -144,7 +148,7 @@ const RunningTrack = () => {
       if (x !== null && y !== null && z !== null) {
         const accelerationMagnitude = Math.sqrt(x * x + y * y + z * z);
         if (accelerationMagnitude > threshold) {
-          setSteps((prevStep)=>prevStep+1);
+          setSteps((prevStep) => prevStep + 1);
         }
       }
     };
@@ -186,11 +190,20 @@ const RunningTrack = () => {
         .catch(console.error);
     } else {
       setUpEventListener();
-  }
+    }
     return () => {
       window.removeEventListener('deviceorientation', handleOrientation);
     }
   }, [isPlay]);
+  useEffect(() => {
+    const userWeight = 70;
+    if (distance > 0) {
+      const METVALUE = pace > 6 ? 9.8 : 7.0;
+      const durationHrs = activeDuration / 1000 * 60 * 60;
+      const caloriesCut = userWeight * METVALUE * durationHrs;
+      setCalorie(caloriesCut.toFixed(0));
+    }
+  }, [pace, distance, activeDuration]);
   const playPause = () => {
     setPlay((prev) => {
       if (!prev) {
@@ -232,16 +245,56 @@ const RunningTrack = () => {
     setActiveDuration(0);
     setPauseTime(null);
   }
-
+  useEffect(() => {
+    const loadMarker = async () => {
+      if ( mapRef.current) {
+        try {
+          const { AdvancedMarkerElement, PinElement } = await google.maps.importLibrary("marker");
+          if (startingLocation) {
+            const startPin = new PinElement({
+              background: "#00FF00",
+              glyphColor: "#FFFFFF",
+              borderColor: "#00CC00",
+            });
+            starMarkertRef.current = new AdvancedMarkerElement({
+              map: mapRef.current,
+              position: startingLocation,
+              content: startPin.element,
+            });
+          }
+          if (endingLocation) {
+            const endPin = new PinElement({
+              background: "#FF0000",
+              glyphColor: "#FFFFFF",
+              borderColor: "#CC0000",
+            });
+            endMarkerRef.current = new AdvancedMarkerElement({
+              map: mapRef.current,
+              position: endingLocation,
+              content: endPin.element,
+            });
+          }
+        } catch (error) {
+          console.error("Error loading marker", error);
+        }
+      }
+    };
+    loadMarker();
+}, [startingLocation, endingLocation, isPlay]);
   return (
+    <LoadScript googleMapsApiKey= {googleMapAPI} libraries={LIBRARIES}>
     <section className="run-track min-vh-100">
       <div className="Running-area">
         <div className="map-area">
-          <LoadScript googleMapsApiKey={googleMapAPI}>
             <GoogleMap
+              id=""
               center={location}
               zoom={location ? 15 : 2}
               mapContainerStyle={{ height: "450px", width: "100%" }}
+              onLoad={(map) => {
+                mapRef.current = map;
+              }}
+              options={{MapId}}
             >
               {path.length > 1 && (
                 <Polyline
@@ -249,30 +302,11 @@ const RunningTrack = () => {
                   options={{
                     strokeColor: "#FF0000",
                     strokeOpacity: 1.0,
-                    strokeWeight: 4,
-                  }}
-                />
-              )}
-              {startingLocation && (
-                <Marker
-                  position={startingLocation}
-                  icon={{
-                    url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
-                    scaledSize: new window.google.maps.Size(30, 30),
-                  }}
-                />
-              )}
-              {endingLocation && (
-                <Marker
-                  position={endingLocation}
-                  icon={{
-                    url: "http://maps.google.com/mapfiles/ms/icons/red-dot.png",
-                    scaledSize: new window.google.maps.Size(30, 30),
+                    strokeWeight:4,
                   }}
                 />
               )}
             </GoogleMap>
-          </LoadScript>
         </div>
         <div className="details-area">
           <div className="user-info">
@@ -323,7 +357,8 @@ const RunningTrack = () => {
           </div>
         </div>
       </div>
-    </section>
+    </section >
+      </LoadScript>
   );
 };
 
