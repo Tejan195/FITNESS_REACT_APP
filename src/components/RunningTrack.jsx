@@ -1,7 +1,8 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlay, faPause } from "@fortawesome/free-solid-svg-icons";
-import { GoogleMap, useLoadScript, Polyline, LoadScript } from "@react-google-maps/api";
+import { GoogleMap, Polyline, LoadScript } from "@react-google-maps/api";
+import { throttle } from "lodash";
 import "./RunningTrack.css";
 
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -42,6 +43,20 @@ const RunningTrack = () => {
   const mapRef = useRef(null);
   const starMarkertRef = useRef(null);
   const endMarkerRef = useRef(null);
+  const throttleRef = useRef(null);
+
+  useEffect(() =>{
+    throttleRef.current = throttle((newLocation) => {
+      setPrevLocation(newLocation);
+      setLocation(newLocation);
+      setPath((prevPath) => [...prevPath, newLocation]);
+    }, 1000);
+    return () => {
+      if (throttleRef.current) {
+        throttleRef.current.cancel();
+      }
+    }
+  },[])
   useEffect(() => {
     let watchId;
     if (isPlay) {
@@ -58,21 +73,17 @@ const RunningTrack = () => {
             );
             if (newDistance > 0) {
               setDistance((prevDistance) => prevDistance + newDistance);
-              setPrevLocation(newLocation);
-              setLocation(newLocation);
-              setPath((prevPath) => [...prevPath, newLocation]);
+              throttleRef.current(newLocation);
             }
           } else {
-            setPrevLocation(newLocation);
-            setLocation(newLocation);
-            setPath([newLocation]);
+            throttleRef.current(newLocation);
           }
         },
         (error) => {
           alert(`Error Fetching location:${error.message}`);
           console.log("Fetching location error", error);
         },
-        { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 }
+        { enableHighAccuracy: true }
       );
     }
     return () => {
@@ -99,19 +110,21 @@ const RunningTrack = () => {
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   }
 
-  useEffect(() => {
-    const calculatePaceAndStride = (currentSpeed) => {
-      if (currentSpeed > 0 && distance > 0) {
-        const pacePerKm = (1000 / currentSpeed) / 60;
-        setPace(pacePerKm.toFixed(2));
-      }
-      const calculatedStrideLength = currentSpeed > 0
-        ? Math.max(0.45 * currentSpeed, 0.5)
-        : 0;
-      setStrideLength(calculatedStrideLength);
-    };
-    calculatePaceAndStride(speed);
-  }, [speed, distance]);
+  const calculatePaceAndStride = useCallback((currentSpeed) => {
+  if (currentSpeed > 0 && distance > 0) {
+    const pacePerKm = (1000 / currentSpeed) / 60;
+    setPace(pacePerKm.toFixed(2));
+  }
+  const calculatedStrideLength = currentSpeed > 0
+    ? Math.max(0.45 * currentSpeed, 0.5)
+    : 0;
+  setStrideLength(calculatedStrideLength);
+}, [distance]);
+
+useEffect(() => {
+  calculatePaceAndStride(speed);
+}, [speed, distance, calculatePaceAndStride]);
+
 
   useEffect(() => {
     const fetchLocation = async () => {
@@ -280,21 +293,19 @@ const RunningTrack = () => {
       }
     };
     loadMarker();
-}, [startingLocation, endingLocation, isPlay]);
-  return (
-    <LoadScript googleMapsApiKey= {googleMapAPI} libraries={LIBRARIES}>
-    <section className="run-track min-vh-100">
-      <div className="Running-area">
-        <div className="map-area">
+  }, [startingLocation, endingLocation, isPlay]);
+
+return (
+    <LoadScript googleMapsApiKey={googleMapAPI} libraries={LIBRARIES}>
+      <section className="run-track min-vh-100">
+        <div className="Running-area">
+          <div className="map-area">
             <GoogleMap
-              id=""
               center={location}
               zoom={location ? 15 : 2}
               mapContainerStyle={{ height: "450px", width: "100%" }}
-              onLoad={(map) => {
-                mapRef.current = map;
-              }}
-              options={{MapId}}
+              onLoad={(map) => (mapRef.current = map)}
+              options={{ MapId }}
             >
               {path.length > 1 && (
                 <Polyline
@@ -302,63 +313,64 @@ const RunningTrack = () => {
                   options={{
                     strokeColor: "#FF0000",
                     strokeOpacity: 1.0,
-                    strokeWeight:4,
+                    strokeWeight: 4,
                   }}
                 />
               )}
             </GoogleMap>
-        </div>
-        <div className="details-area">
-          <div className="user-info">
-            <div className="img">
-              <img
-                src="https://randomuser.me/api/portraits/men/75.jpg"
-                alt="User Profile"
-                className="user-img"
-              />
-              <h2>John Doe</h2>
-              <p>10 Sept 17:00</p>
+          </div>
+          <div className="details-area">
+            <div className="user-info">
+              <div className="img">
+                <img
+                  src="https://randomuser.me/api/portraits/men/75.jpg"
+                  alt="User Profile"
+                  className="user-img"
+                />
+                <h2>John Doe</h2>
+                <p>10 Sept 17:00</p>
+              </div>
+              <div className="runDis">
+                <h1>{(distance / 1000).toFixed(1)}km</h1>
+              </div>
             </div>
-            <div className="runDis">
-              <h1>{(distance/1000).toFixed(1)}km</h1>
+            <div className="pause-resume">
+              <button
+                className={`pause-resume-btn ${isPlay ? "play" : "pause"}`}
+                onClick={playPause}
+                onMouseDown={holdToEnd}
+                onMouseUp={releaseTocancel}
+                onTouchStart={holdToEnd}
+                onTouchEnd={releaseTocancel}
+              >
+                <FontAwesomeIcon
+                  icon={isPlay ? faPause : faPlay}
+                  className="play-pause-icon"
+                />
+              </button>
             </div>
           </div>
-          <div className="pause-resume">
-            <button
-              onClick={playPause}
-              onMouseDown={holdToEnd}
-              onMouseUp={releaseTocancel}
-              onTouchStart={holdToEnd}
-              onTouchEnd={releaseTocancel}
-            >
-              <FontAwesomeIcon
-                icon={isPlay ? faPause : faPlay}
-                className="play-pause-icon"
-              />
-            </button>
+          <div className="stats-grid">
+            <div className="stat-item">
+              <h3>{formattedDuration(activeDuration)}</h3>
+              <p>Duration</p>
+            </div>
+            <div className="stat-item">
+              <h3>{pace}'/km</h3>
+              <p>Pace</p>
+            </div>
+            <div className="stat-item">
+              <h3>400</h3>
+              <p>Calories</p>
+            </div>
+            <div className="stat-item">
+              <h3>{steps}</h3>
+              <p>Steps</p>
+            </div>
           </div>
         </div>
-        <div className="stats-grid">
-          <div className="stat-item">
-            <h3>{formattedDuration(activeDuration)}</h3>
-            <p>Duration</p>
-          </div>
-          <div className="stat-item">
-            <h3>{pace}'/km</h3>
-            <p>Pace</p>
-          </div>
-          <div className="stat-item">
-            <h3>400</h3>
-            <p>Calories</p>
-          </div>
-          <div className="stat-item">
-            <h3>{steps}</h3>
-            <p>Steps</p>
-          </div>
-        </div>
-      </div>
-    </section >
-      </LoadScript>
+      </section>
+    </LoadScript>
   );
 };
 
