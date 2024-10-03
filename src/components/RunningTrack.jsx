@@ -299,7 +299,19 @@ return (
     <LoadScript googleMapsApiKey={googleMapAPI} libraries={LIBRARIES}>
       <section className="run-track min-vh-100">
         <div className="Running-area">
-          <div className="map-area">
+        <div className="map-area">
+     {!location && (
+          <div className="loader-container">
+            <div className="loader">
+              <div className="loader__bar"></div>
+              <div className="loader__bar"></div>
+              <div className="loader__bar"></div>
+              <div className="loader__bar"></div>
+              <div className="loader__bar"></div>
+              <div className="loader__ball"></div>
+            </div>
+          </div>
+        )}
             <GoogleMap
               center={location}
               zoom={location ? 15 : 2}
