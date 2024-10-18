@@ -20,6 +20,9 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
   return R * c;
 };
 const LIBRARIES = ["marker"];
+const MAX_SPEED_KMH = 30;
+const TIME_WINDOW_SECONDS = 60;
+const MIN_ACCURACY = 30;
 const RunningTrack = () => {
   const [location, setLocation] = useState(null);
   const googleMapAPI = useMemo(() => import.meta.env.VITE_API_KEY, []);
@@ -30,7 +33,7 @@ const RunningTrack = () => {
   const [activeDuration, setActiveDuration] = useState(0);
   const [steps, setSteps] = useState(0);
   const [speed, setSpeed] = useState(0);
-  const [stride, setStrideLength] = useState(0);
+  const [strideLength, setStrideLength] = useState(0);
   const [pauseTime, setPauseTime] = useState(null);
   const [calorie, setCalorie] = useState(0);
   const [direction, setDirection] = useState(0);
@@ -38,70 +41,113 @@ const RunningTrack = () => {
   const [path, setPath] = useState([]);
   const [startingLocation, setStartingLocation] = useState(null);
   const [endingLocation, setEndingLocation] = useState(null);
+  const [positionHistory, setPositionHistory] = useState([]);
+  const [lastStepTime, setlastStepTime] = useState(0);
+  const [prevAcceleration, setPrevAcceleration] = useState(0);
+  const lastValidPosition = useRef(null);
   const MapId = 'e481db0b4a053450';
   let HoldEnd = useRef(null);
   const mapRef = useRef(null);
   const starMarkertRef = useRef(null);
   const endMarkerRef = useRef(null);
   const throttleRef = useRef(null);
-
-  useEffect(() =>{
+ useEffect(() => {
     throttleRef.current = throttle((newLocation) => {
       setPrevLocation(newLocation);
       setLocation(newLocation);
       setPath((prevPath) => [...prevPath, newLocation]);
     }, 1000);
+
     return () => {
       if (throttleRef.current) {
         throttleRef.current.cancel();
       }
-    }
-  },[])
-  useEffect(() => {
+    };
+ }, []);
+    const isValidPosition = useCallback((newPosition) => {
+    if (!prevLocation || positionHistory.length === 0) return true;
+
+    const lastPosition = positionHistory[positionHistory.length - 1];
+    const timeDiff = (newPosition.timestamp - lastPosition.timestamp) / 1000;
+    const distance = calculateDistance(
+      lastPosition.lat,
+      lastPosition.lng,
+      newPosition.lat,
+      newPosition.lng
+    );
+    const speedKmh = (distance / timeDiff) * 3.6; 
+
+    return speedKmh <= MAX_SPEED_KMH && newPosition.accuracy <= MIN_ACCURACY;
+  }, [prevLocation,positionHistory]);
+ useEffect(() => {
     let watchId;
     if (isPlay) {
       watchId = navigator.geolocation.watchPosition(
         (position) => {
-          const { latitude, longitude } = position.coords;
-          const newLocation = { lat: latitude, lng: longitude };
-          if (prevLocation) {
-            const newDistance = calculateDistance(
-              prevLocation.lat || latitude,
-              prevLocation.lng || longitude,
-              latitude,
-              longitude
-            );
-            if (newDistance > 0) {
-              setDistance((prevDistance) => prevDistance + newDistance);
+          const { latitude, longitude, accuracy, timestamp } = position.coords;
+          const newLocation = { lat: latitude, lng: longitude, accuracy, timestamp };
+          
+          if (isValidPosition(newLocation)) {
+            if (prevLocation) {
+              const newDistance = calculateDistance(
+                prevLocation.lat,
+                prevLocation.lng,
+                latitude,
+                longitude
+              );
+              if (newDistance > 0) {
+                setDistance((prevDistance) => prevDistance + newDistance);
+                throttleRef.current(newLocation);
+                lastValidPosition.current = newLocation;
+              }
+            } else {
               throttleRef.current(newLocation);
+              lastValidPosition.current = newLocation;
             }
+
+            setPositionHistory((prevHistory) => {
+              const newHistory = [...prevHistory, newLocation];
+              return newHistory.filter(
+                (pos) => newLocation.timestamp - pos.timestamp <= TIME_WINDOW_SECONDS * 1000
+              );
+            });
           } else {
-            throttleRef.current(newLocation);
+            console.log("Invalid position detected, using last valid position");
+            if (lastValidPosition.current) {
+              throttleRef.current(lastValidPosition.current);
+            }
           }
         },
         (error) => {
-          alert(`Error Fetching location:${error.message}`);
+          alert(`Error Fetching location: ${error.message}`);
           console.log("Fetching location error", error);
         },
-        { enableHighAccuracy: true }
+        {
+          enableHighAccuracy: true,
+          maximumAge: 30000,
+          timeout:27000,
+        }
       );
     }
+
     return () => {
       if (watchId) {
         navigator.geolocation.clearWatch(watchId);
       }
     };
-  }, [isPlay, prevLocation]);
+  }, [isPlay, prevLocation, isValidPosition]);
+
 
   useEffect(() => {
     let intervalId;
     if (isPlay) {
       intervalId = setInterval(() => {
-        setActiveDuration(prev => prev + 1000);
+        setActiveDuration((prev) => prev + 1000);
       }, 1000);
     }
     return () => clearInterval(intervalId);
   }, [isPlay]);
+
 
   const formattedDuration = (ms) => {
     const totalSeconds = Math.floor(ms / 1000);
@@ -111,19 +157,19 @@ const RunningTrack = () => {
   }
 
   const calculatePaceAndStride = useCallback((currentSpeed) => {
-  if (currentSpeed > 0 && distance > 0) {
-    const pacePerKm = (1000 / currentSpeed) / 60;
+  if (currentSpeed > 0) {
+    const pacePerKm = (currentSpeed*60) / 1000;
     setPace(pacePerKm.toFixed(2));
   }
   const calculatedStrideLength = currentSpeed > 0
     ? Math.max(0.45 * currentSpeed, 0.5)
     : 0;
   setStrideLength(calculatedStrideLength);
-}, [distance]);
+}, []);
 
 useEffect(() => {
   calculatePaceAndStride(speed);
-}, [speed, distance, calculatePaceAndStride]);
+}, [speed, calculatePaceAndStride]);
 
 
   useEffect(() => {
@@ -156,14 +202,24 @@ useEffect(() => {
   useEffect(() => {
     if (!isPlay) return;
     const threshold = 9.81;
+    const min_delay = 250;
     const handleStepsMotion = (event) => {
       const { x, y, z } = event.acceleration;
-      if (x !== null && y !== null && z !== null) {
-        const accelerationMagnitude = Math.sqrt(x * x + y * y + z * z);
-        if (accelerationMagnitude > threshold) {
-          setSteps((prevStep) => prevStep + 1);
+      if (x === null || y === null || z === null) return;
+      const accelerationMagnitude = Math.sqrt(x * x + y * y + z * z);
+       const currenTime = Date.now();
+      if (currenTime - lastStepTime < min_delay) return;
+      if (accelerationMagnitude > threshold && accelerationMagnitude > prevAcceleration) {
+        if (strideLength > 0) {
+          const newDistance = distance + strideLength;
+          if (newDistance > distance) {
+            setSteps(prev => prev + 1);
+            setDistance(newDistance);
+            setlastStepTime(currenTime);
+          }
         }
       }
+      setPrevAcceleration(accelerationMagnitude);
     };
     if (window.DeviceMotionEvent) {
       window.addEventListener('devicemotion', handleStepsMotion);
@@ -173,7 +229,7 @@ useEffect(() => {
     return () => {
       window.removeEventListener('devicemotion', handleStepsMotion);
     };
-  }, [isPlay, steps]);
+  }, [isPlay, lastStepTime,prevAcceleration]);
   useEffect(() => {
     if (!isPlay) return;
     const handleOrientation = (event) => {
@@ -300,18 +356,18 @@ return (
       <section className="run-track min-vh-100">
         <div className="Running-area">
         <div className="map-area">
-     {!location && (
-          <div className="loader-container">
-            <div className="loader">
-              <div className="loader__bar"></div>
-              <div className="loader__bar"></div>
-              <div className="loader__bar"></div>
-              <div className="loader__bar"></div>
-              <div className="loader__bar"></div>
-              <div className="loader__ball"></div>
+          {!location ? (
+            <div className="loader-container">
+              <div className="loader">
+                <div className="loader__bar"></div>
+                <div className="loader__bar"></div>
+                <div className="loader__bar"></div>
+                <div className="loader__bar"></div>
+                <div className="loader__bar"></div>
+                <div className="loader__ball"></div>
+              </div>
             </div>
-          </div>
-        )}
+          ) : (
             <GoogleMap
               center={location}
               zoom={location ? 15 : 2}
@@ -323,13 +379,14 @@ return (
                 <Polyline
                   path={path}
                   options={{
-                    strokeColor: "#FF0000",
+                    strokeColor: "#4CAF50",
                     strokeOpacity: 1.0,
                     strokeWeight: 4,
                   }}
                 />
               )}
             </GoogleMap>
+          )}
           </div>
           <div className="details-area">
             <div className="user-info">
@@ -372,7 +429,7 @@ return (
               <p>Pace</p>
             </div>
             <div className="stat-item">
-              <h3>400</h3>
+            <h3>{ calorie }</h3>
               <p>Calories</p>
             </div>
             <div className="stat-item">
