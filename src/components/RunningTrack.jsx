@@ -313,6 +313,7 @@ useEffect(() => {
     setLocation(null);
     setActiveDuration(0);
     setPauseTime(null);
+    setCalorie(0);
   }
   useEffect(() => {
     const loadMarker = async () => {
