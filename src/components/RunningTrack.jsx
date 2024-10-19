@@ -229,7 +229,7 @@ useEffect(() => {
     return () => {
       window.removeEventListener('devicemotion', handleStepsMotion);
     };
-  }, [isPlay, lastStepTime,prevAcceleration]);
+  }, [isPlay, lastStepTime,prevAcceleration,distance,strideLength]);
   useEffect(() => {
     if (!isPlay) return;
     const handleOrientation = (event) => {
