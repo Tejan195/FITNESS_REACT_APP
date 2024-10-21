@@ -267,12 +267,15 @@ useEffect(() => {
   }, [isPlay]);
   useEffect(() => {
     const userWeight = 70;
-    if (distance > 0) {
+    if (pace>0 && distance>0) {
       const METVALUE = pace > 6 ? 9.8 : 7.0;
       const durationHrs = activeDuration / 3600000;
       const caloriesCut = userWeight * METVALUE * durationHrs;
       setCalorie(caloriesCut.toFixed(0));
     }
+    console.log("Pace", pace);
+    console.log("Distance", distance);
+    console.log("AD", activeDuration);
   }, [pace, distance, activeDuration]);
   const playPause = () => {
     setPlay((prev) => {
