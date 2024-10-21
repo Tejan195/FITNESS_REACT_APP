@@ -81,7 +81,6 @@ const RunningTrack = () => {
     return speedKmh <= MAX_SPEED_KMH && newPosition.accuracy <= MIN_ACCURACY && distance> DISTANCE_THRESHOLD;
   }, []);
  useEffect(() => {
-    let watchId;
    if (isPlay) return; {
       watchIdRef.current = navigator.geolocation.watchPosition(
         (position) => {
@@ -145,7 +144,7 @@ const RunningTrack = () => {
       if (intervalIdRef.current) {
         clearInterval(intervalIdRef.current);
       }
-    };
+    }
   }, [isPlay]);
 
 
@@ -156,20 +155,13 @@ const RunningTrack = () => {
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   }
 
-  const calculatePaceAndStride = useCallback((currentSpeed) => {
-  if (currentSpeed > 0) {
-    const pacePerKm = (currentSpeed*60) / 1000;
-    setPace(pacePerKm.toFixed(2));
-  }
-  const calculatedStrideLength = currentSpeed > 0
-    ? Math.max(0.45 * currentSpeed, 0.5)
-    : 0;
-  setStrideLength(calculatedStrideLength);
-}, []);
-
-useEffect(() => {
-  calculatePaceAndStride(speed);
-}, [speed, calculatePaceAndStride]);
+ useEffect(() => {
+    if (speed > 0) {
+      const pacePerKm = (speed * 60) / 1000;
+      setPace(pacePerKm.toFixed(2));
+      setStrideLength(Math.max(0.45 * speed, 0.5));
+    }
+  }, [speed]);
 
 
   useEffect(() => {
@@ -199,39 +191,40 @@ useEffect(() => {
 
     fetchLocation();
   }, [isPlay]);
-  useEffect(() => {
+ useEffect(() => {
     if (!isPlay) return;
-    const threshold = 9.81;
-    const min_delay = 250;
-    let lastStepTime = 0;
-    let prevAcceleration = 0;
-    const handleStepsMotion = (event) => {
+
+    const handleStepsMotion = throttle((event) => {
       const { x, y, z } = event.acceleration;
-      if (x === null || y === null || z === null) return;
+      if (!x || !y || !z) return;
+
       const accelerationMagnitude = Math.sqrt(x * x + y * y + z * z);
-       const currenTime = Date.now();
-      if (currenTime - lastStepTime < min_delay) return;
-      if (accelerationMagnitude > threshold && accelerationMagnitude > prevAcceleration) {
-        if (strideLength > 0) {
-          const newDistance = distance + strideLength;
-          if (newDistance > distance) {
-            setSteps(prev => prev + 1);
-            setDistance(newDistance);
-            lastStepTime = currenTime;
-          }
-        }
+      const currentTime = Date.now();
+      
+      if (currentTime - lastStepTimeRef.current < 250) return;
+
+      if (
+        accelerationMagnitude > 9.81 &&
+        accelerationMagnitude > prevAccelerationRef.current &&
+        strideLength > 0
+      ) {
+        setSteps((prev) => prev + 1);
+        setDistance((prev) => prev + strideLength);
+        lastStepTimeRef.current = currentTime;
       }
-      prevAcceleration = accelerationMagnitude;
-    };
+      
+      prevAccelerationRef.current = accelerationMagnitude;
+    }, 100);
+
     if (window.DeviceMotionEvent) {
       window.addEventListener('devicemotion', handleStepsMotion);
-    } else {
-      console.warn("Devicemotion is not supported by the device");
     }
+
     return () => {
       window.removeEventListener('devicemotion', handleStepsMotion);
+      handleStepsMotion.cancel();
     };
-  }, [isPlay,distance,strideLength]);
+  }, [isPlay, strideLength]);
   useEffect(() => {
     if (!isPlay) return;
     const handleOrientation = (event) => {
@@ -305,18 +298,20 @@ useEffect(() => {
     }
   };
 
-  const endWorkout = () => {
+  const endWorkout = useCallback(() => {
     setPlay(false);
     setDistance(0);
     setStartTime(null);
     setPace(0);
     setSpeed(0);
     setSteps(0);
-    setLocation(null);
     setActiveDuration(0);
     setPauseTime(null);
     setCalorie(0);
-  }
+     positionHistoryRef.current = [];
+    prevLocationRef.current = null;
+    lastValidPosition.current = null;
+  }, []);
   useEffect(() => {
     const loadMarker = async () => {
       if ( mapRef.current) {
