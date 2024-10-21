@@ -23,6 +23,7 @@ const LIBRARIES = ["marker"];
 const MAX_SPEED_KMH = 30;
 const TIME_WINDOW_SECONDS = 60;
 const MIN_ACCURACY = 30;
+const DISTANCE_THRESHOLD = 5;
 const RunningTrack = () => {
   const [location, setLocation] = useState(null);
   const googleMapAPI = useMemo(() => import.meta.env.VITE_API_KEY, []);
@@ -77,7 +78,7 @@ const RunningTrack = () => {
     );
     const speedKmh = (distance / timeDiff) * 3.6; 
 
-    return speedKmh <= MAX_SPEED_KMH && newPosition.accuracy <= MIN_ACCURACY;
+    return speedKmh <= MAX_SPEED_KMH && newPosition.accuracy <= MIN_ACCURACY && distance> DISTANCE_THRESHOLD;
   }, [prevLocation,positionHistory]);
  useEffect(() => {
     let watchId;
@@ -268,7 +269,7 @@ useEffect(() => {
     const userWeight = 70;
     if (distance > 0) {
       const METVALUE = pace > 6 ? 9.8 : 7.0;
-      const durationHrs = activeDuration / 1000 * 60 * 60;
+      const durationHrs = activeDuration / 3600000;
       const caloriesCut = userWeight * METVALUE * durationHrs;
       setCalorie(caloriesCut.toFixed(0));
     }
