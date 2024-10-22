@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import UpdateTime from "../utilily/UpdateTime";
 import { faPlay, faPause } from "@fortawesome/free-solid-svg-icons";
 import { GoogleMap, Polyline, LoadScript } from "@react-google-maps/api";
 import { throttle } from "lodash";
@@ -42,6 +43,7 @@ const RunningTrack = () => {
   const [direction, setDirection] = useState(0);
   const [prevLocation, setPrevLocation] = useState(null);
   const [path, setPath] = useState([]);
+  const [date, setDate] = useState(null);
   const [startingLocation, setStartingLocation] = useState(null);
   const [endingLocation, setEndingLocation] = useState(null);
   const lastValidPosition = useRef(null);
@@ -395,7 +397,7 @@ return (
                   className="user-img"
                 />
                 <h2>John Doe</h2>
-                <p>10 Sept 17:00</p>
+             <UpdateTime/>
               </div>
               <div className="runDis">
                 <h1>{(distance / 1000).toFixed(1)}km</h1>

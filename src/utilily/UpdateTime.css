@@ -1,0 +1,6 @@
+.date-time{
+display: flex;
+flex-direction: column;
+text-align: center;
+font-weight: 500;
+}
