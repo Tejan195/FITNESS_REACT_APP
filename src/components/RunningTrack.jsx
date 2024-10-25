@@ -167,32 +167,31 @@ const RunningTrack = () => {
 
 
   useEffect(() => {
-    const fetchLocation = async () => {
-      if (navigator.geolocation) {
-        try {
-          await navigator.geolocation.getCurrentPosition(
-            (position) => {
-              const { latitude, longitude, speed: currentSpeed } = position.coords;
-              const initialLocation = { lat: latitude, lng: longitude };
-              setLocation(initialLocation);
-              setPrevLocation(initialLocation);
-              setPath([initialLocation]);
-              setSpeed(currentSpeed || 0);
-            },
-            (error) => {
-              console.error("Error fetching location", error);
-            }
-          );
-        } catch (error) {
-          console.error("Error occurred while getting location", error);
-        }
-      } else {
-        console.error("Browser does not support geolocation.");
-      }
-    };
+  const fetchLocation = async () => {
+    if (navigator.geolocation) {
+      try {
+        const position = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject);
+        });
 
-    fetchLocation();
-  }, [isPlay]);
+        const { latitude, longitude, speed: currentSpeed } = position.coords;
+        const initialLocation = { lat: latitude, lng: longitude };
+
+        setLocation(initialLocation);
+        setPrevLocation(initialLocation);
+        setPath([initialLocation]);
+        setSpeed(currentSpeed || 0);
+      } catch (error) {
+        console.error("Error occurred while getting location", error);
+      }
+    } else {
+      console.error("Browser does not support geolocation.");
+    }
+  };
+
+  fetchLocation();
+}, [isPlay]);
+
  useEffect(() => {
     if (!isPlay) return;
 
@@ -415,7 +414,8 @@ return (
                 <FontAwesomeIcon
                   icon={isPlay ? faPause : faPlay}
                   className="play-pause-icon"
-                />
+              />
+              
               </button>
             </div>
           </div>
