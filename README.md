@@ -64,7 +64,7 @@ The application uses the **Google Maps API** for route tracking and real-time st
 ---
 
 ## **Live Link**  
-[Fitness App](https://tejanfitnessapp.netlify.app)  
+https://fitechai.netlify.app/
 
 ---
 
